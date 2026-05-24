@@ -90,9 +90,7 @@ fun Modifier.glass(
                 GlassBorderDark.copy(alpha = borderAlpha * 0.4f),
                 Color.Transparent,
                 WhiteGlassBorder.copy(alpha = 0.05f)
-            ),
-            start = Offset(0f, 0f),
-            end = Offset(size.width, size.height)
+            )
         ),
         shape = RoundedCornerShape(cornerRadius)
     )
@@ -294,7 +292,7 @@ fun GlassToolbarButton(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 4.dp, right = 4.dp)
+                    .padding(bottom = 4.dp, end = 4.dp)
                     .background(EmeraldGlow, RoundedCornerShape(4.dp))
                     .padding(horizontal = 3.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center

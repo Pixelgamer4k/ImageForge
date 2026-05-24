@@ -18,7 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -438,5 +439,5 @@ fun SwipeView(
  * Simple modifier helper to extract layout parent width
  */
 fun Modifier.layoutIdParent(onWidthFetched: (Float) -> Unit): Modifier = this.drawBehind {
-    onWidthFetched(size.width)
+    onWidthFetched(this.size.width)
 }
