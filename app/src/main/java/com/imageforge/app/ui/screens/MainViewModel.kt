@@ -123,6 +123,36 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun setImageA(bitmap: Bitmap) {
+        viewModelScope.launch(Dispatchers.Default) {
+            baseImageA = bitmap
+            val palette = extractColors(baseImageA)
+            _uiState.update { state ->
+                if (state is MainUiState.Ready) {
+                    state.copy(
+                        imageA = baseImageA,
+                        colorsPalette = palette
+                    )
+                } else state
+            }
+            processImagesPipeline()
+        }
+    }
+
+    fun setImageB(bitmap: Bitmap) {
+        viewModelScope.launch(Dispatchers.Default) {
+            baseImageB = bitmap
+            _uiState.update { state ->
+                if (state is MainUiState.Ready) {
+                    state.copy(
+                        imageB = baseImageB
+                    )
+                } else state
+            }
+            processImagesPipeline()
+        }
+    }
+
     /**
      * Set active comparison mode
      */
@@ -157,6 +187,14 @@ class MainViewModel : ViewModel() {
                     zoomPercent = zoom.coerceIn(100f, 1000f),
                     panOffset = pan
                 )
+            } else state
+        }
+    }
+
+    fun setZoom(zoom: Float) {
+        _uiState.update { state ->
+            if (state is MainUiState.Ready) {
+                state.copy(zoomPercent = zoom.coerceIn(100f, 1000f))
             } else state
         }
     }
@@ -260,11 +298,11 @@ class MainViewModel : ViewModel() {
      * Asynchronous Image Filter Processing Pipeline + Statistics calculations
      */
     private fun processImagesPipeline() {
-        val currentState = _uiState.value as? MainUiState.Ready ?: return
-        
         _uiState.update { if (it is MainUiState.Ready) it.copy(isProcessing = true) else it }
 
         viewModelScope.launch(Dispatchers.Default) {
+            val currentState = _uiState.value as? MainUiState.Ready ?: return@launch
+            
             // Apply scale / rot / flip transforms first
             val transA = applyTransformations(baseImageA, currentState)
             val transB = applyTransformations(baseImageB, currentState)
@@ -425,21 +463,22 @@ class MainViewModel : ViewModel() {
         val gChan = IntArray(256)
         val bChan = IntArray(256)
 
-        // Downsample for speedy computation (take every 5th pixel)
-        val width = imgA.width
-        val height = imgA.height
-        
-        for (y in 0 until height step 4) {
-            for (x in 0 until width step 4) {
-                val pixel = imgA.getPixel(x, y)
-                val r = AndroidColor.red(pixel)
-                val g = AndroidColor.green(pixel)
-                val b = AndroidColor.blue(pixel)
+        // Downsample/scale strictly for speedy calculation (under 1ms)
+        val analysisWidth = 256
+        val analysisHeight = 170
+        val scaled = Bitmap.createScaledBitmap(imgA, analysisWidth, analysisHeight, false)
 
-                rChan[r]++
-                gChan[g]++
-                bChan[b]++
-            }
+        val pixels = IntArray(analysisWidth * analysisHeight)
+        scaled.getPixels(pixels, 0, analysisWidth, 0, 0, analysisWidth, analysisHeight)
+
+        for (pixel in pixels) {
+            val r = AndroidColor.red(pixel)
+            val g = AndroidColor.green(pixel)
+            val b = AndroidColor.blue(pixel)
+
+            rChan[r]++
+            gChan[g]++
+            bChan[b]++
         }
 
         var maxVal = 1
@@ -458,13 +497,14 @@ class MainViewModel : ViewModel() {
         val rows = 100
         val bins = Array(columns) { IntArray(rows) }
 
-        val width = img.width
-        val height = img.height
+        // Scale to standard columns x 256 for lightning-fast uniform calculation
+        val scaled = Bitmap.createScaledBitmap(img, columns, 256, false)
+        val pixels = IntArray(columns * 256)
+        scaled.getPixels(pixels, 0, columns, 0, 0, columns, 256)
 
         for (c in 0 until columns) {
-            val srcX = (c * (width - 1)) / (columns - 1)
-            for (y in 0 until height step 4) {
-                val pixel = img.getPixel(srcX, y)
+            for (y in 0 until 256) {
+                val pixel = pixels[y * columns + c]
                 val lum = getLuminance(pixel)
                 val rIdx = (lum * (rows - 1)) / 255
                 bins[c][rIdx]++
@@ -485,28 +525,27 @@ class MainViewModel : ViewModel() {
      * Compute Vectorscope chromatic angle offsets
      */
     private suspend fun calculateVectorscope(img: Bitmap): VectorscopeData = withContext(Dispatchers.Default) {
-        val width = img.width
-        val height = img.height
         val points = mutableListOf<Offset>()
 
-        // Draw 300 downsampled chromatic points based on Cb/Cr formulas
-        val stepX = width / 18
-        val stepY = height / 18
+        // Scale to smaller size for uniform plotting speed
+        val targetSize = 120
+        val scaled = Bitmap.createScaledBitmap(img, targetSize, targetSize, false)
+        val pixels = IntArray(targetSize * targetSize)
+        scaled.getPixels(pixels, 0, targetSize, 0, 0, targetSize, targetSize)
 
-        for (y in 0 until height step stepY) {
-            for (x in 0 until width step stepX) {
-                val pixel = img.getPixel(x, y)
-                val r = AndroidColor.red(pixel)
-                val g = AndroidColor.green(pixel)
-                val b = AndroidColor.blue(pixel)
+        // Downsample points to keep the vectorscope readable and performant (~400 points)
+        for (i in 0 until pixels.size step 36) {
+            val pixel = pixels[i]
+            val r = AndroidColor.red(pixel)
+            val g = AndroidColor.green(pixel)
+            val b = AndroidColor.blue(pixel)
 
-                // Cb / Cr coordinates (offset from center)
-                val cr = (0.5f * r - 0.4187f * g - 0.0813f * b) / 128f
-                val cb = (-0.1687f * r - 0.3313f * g + 0.5f * b) / 128f
+            // Cb / Cr coordinates (offset from center)
+            val cr = (0.5f * r - 0.4187f * g - 0.0813f * b) / 128f
+            val cb = (-0.1687f * r - 0.3313f * g + 0.5f * b) / 128f
 
-                // Map -1..1 range to coordinates in vectorscope box (-50f..50f relative to center)
-                points.add(Offset(cb * 80f, -cr * 80f))
-            }
+            // Map -1..1 range to coordinates in vectorscope box (-80f..80f relative to center)
+            points.add(Offset(cb * 80f, -cr * 80f))
         }
 
         VectorscopeData(points)

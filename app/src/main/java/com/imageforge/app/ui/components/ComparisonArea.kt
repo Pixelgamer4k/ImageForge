@@ -3,6 +3,7 @@ package com.imageforge.app.ui.components
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -71,6 +74,8 @@ fun ComparisonArea(
     onRatioChanged: (Float) -> Unit,
     onSwipeChanged: (Float) -> Unit,
     onZoomPanChanged: (Float, Offset) -> Unit,
+    onLoadImageA: () -> Unit,
+    onLoadImageB: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -110,6 +115,94 @@ fun ComparisonArea(
                     panOffset = panOffset,
                     onZoomPanChanged = onZoomPanChanged,
                     onSwipeChanged = onSwipeChanged
+                )
+            }
+        }
+
+        // Floating top-right LOAD A & LOAD B buttons
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .glass(cornerRadius = 12.dp, bgAlpha = 0.5f, borderAlpha = 0.6f)
+                    .clickable { onLoadImageA() }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Upload,
+                        contentDescription = "Load Image A",
+                        tint = LimeAurora,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text("LOAD A", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .glass(cornerRadius = 12.dp, bgAlpha = 0.5f, borderAlpha = 0.6f)
+                    .clickable { onLoadImageB() }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Upload,
+                        contentDescription = "Load Image B",
+                        tint = EmeraldGlow,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text("LOAD B", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // Floating bottom-left Zoom Slider control card
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp)
+                .width(180.dp)
+                .glass(cornerRadius = 16.dp, bgAlpha = 0.5f, borderAlpha = 0.5f)
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ZoomIn,
+                    contentDescription = "Zoom slider icon",
+                    tint = WhiteTranslucent,
+                    modifier = Modifier.size(16.dp)
+                )
+                Slider(
+                    value = zoomPercent,
+                    onValueChange = { onZoomPanChanged(it, panOffset) },
+                    valueRange = 100f..1000f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = LimeAurora,
+                        activeTrackColor = EmeraldGlow,
+                        inactiveTrackColor = ForestPond
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "${zoomPercent.toInt()}%",
+                    color = LimeAurora,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -352,16 +445,6 @@ fun SwipeView(
                     onZoomPanChanged(newZoom, newPan)
                 }
             }
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    if (containerWidth > 0) {
-                        val deltaRatio = dragAmount.x / containerWidth
-                        val newRatio = (swipeRatio + deltaRatio).coerceIn(0f, 1f)
-                        onSwipeChanged(newRatio)
-                    }
-                }
-            }
             .layoutIdParent { width -> containerWidth = width },
         contentAlignment = Alignment.Center
     ) {
@@ -396,40 +479,54 @@ fun SwipeView(
                 .clip(SplitClipShape(swipeRatio))
         )
 
-        // Draggable vertical frosted-glass splitter line
-        val density = LocalDensity.current
-        val splitX = (containerWidth * swipeRatio)
-        val splitXDp = with(density) { splitX.toDp() }
-
         if (containerWidth > 0) {
-            // Split bar line
+            val density = LocalDensity.current
+            val splitX = (containerWidth * swipeRatio)
+            val splitXDp = with(density) { splitX.toDp() }
+
+            // Unified draggable vertical frosted-glass splitter container (48dp width hit target)
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(2.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(x = splitXDp)
-                    .background(LimeAurora.copy(alpha = 0.7f))
-            )
-
-            // Neon glass center drag handle matching 48dp criteria
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
+                    .width(48.dp)
                     .align(Alignment.CenterStart)
                     .offset(x = splitXDp - 24.dp)
-                    .glass(cornerRadius = 24.dp, bgAlpha = 0.7f, borderAlpha = 0.9f)
-                    .background(ForestVoid.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val deltaRatio = dragAmount.x / containerWidth
+                            val newRatio = (swipeRatio + deltaRatio).coerceIn(0f, 1f)
+                            onSwipeChanged(newRatio)
+                        }
+                    }
             ) {
-                Icon(
-                    imageVector = Icons.Default.UnfoldMore,
-                    contentDescription = "Slider Handler icon",
-                    tint = LimeAurora,
+                // Split bar line inside (centered horizontally)
+                Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .graphicsLayer(rotationZ = 90f)
+                        .fillMaxHeight()
+                        .width(2.dp)
+                        .align(Alignment.Center)
+                        .background(LimeAurora.copy(alpha = 0.7f))
                 )
+
+                // Neon glass center drag handle matching 48dp criteria (centered)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center)
+                        .glass(cornerRadius = 24.dp, bgAlpha = 0.7f, borderAlpha = 0.9f)
+                        .background(ForestVoid.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.UnfoldMore,
+                        contentDescription = "Slider Handler icon",
+                        tint = LimeAurora,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer(rotationZ = 90f)
+                    )
+                }
             }
         }
     }
