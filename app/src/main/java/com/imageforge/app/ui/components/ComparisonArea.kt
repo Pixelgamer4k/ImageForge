@@ -231,10 +231,15 @@ fun SideBySideView(
                 .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
                 .background(ForestDark.copy(alpha = 0.5f))
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        val newZoom = (zoomPercent * zoom).coerceIn(100f, 1000f)
-                        val newPan = panOffset + pan
-                        onZoomPanChanged(newZoom, newPan)
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val currentScale = zoomPercent / 100f
+                        val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                        val newPan = if (currentScale > 0.001f) {
+                            (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                        } else {
+                            panOffset + pan
+                        }
+                        onZoomPanChanged(newScale * 100f, newPan)
                     }
                 },
             contentAlignment = Alignment.Center
@@ -278,14 +283,19 @@ fun SideBySideView(
                 .clip(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
                 .background(ForestDark.copy(alpha = 0.5f))
                 .pointerInput(isSynced) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        val targetZoom = (zoomB * zoom).coerceIn(100f, 1000f)
-                        val targetPan = panB + pan
-                        if (isSynced) {
-                            onZoomPanChanged(targetZoom, targetPan)
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val currentScale = zoomB / 100f
+                        val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                        val newPan = if (currentScale > 0.001f) {
+                            (panB + centroid) * (newScale / currentScale) - centroid + pan
                         } else {
-                            localZoomB = targetZoom
-                            localPanB = targetPan
+                            panB + pan
+                        }
+                        if (isSynced) {
+                            onZoomPanChanged(newScale * 100f, newPan)
+                        } else {
+                            localZoomB = newScale * 100f
+                            localPanB = newPan
                         }
                     }
                 },
@@ -335,10 +345,15 @@ fun OverlayView(
             .clip(RoundedCornerShape(16.dp))
             .background(ForestDark.copy(alpha = 0.5f))
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newZoom = (zoomPercent * zoom).coerceIn(100f, 1000f)
-                    val newPan = panOffset + pan
-                    onZoomPanChanged(newZoom, newPan)
+                detectTransformGestures { centroid, pan, zoom, _ ->
+                    val currentScale = zoomPercent / 100f
+                    val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                    val newPan = if (currentScale > 0.001f) {
+                        (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                    } else {
+                        panOffset + pan
+                    }
+                    onZoomPanChanged(newScale * 100f, newPan)
                 }
             },
         contentAlignment = Alignment.Center
@@ -439,10 +454,15 @@ fun SwipeView(
             .background(ForestDark.copy(alpha = 0.5f))
             .pointerInput(Unit) {
                 // Combined gesture mapping
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newZoom = (zoomPercent * zoom).coerceIn(100f, 1000f)
-                    val newPan = panOffset + pan
-                    onZoomPanChanged(newZoom, newPan)
+                detectTransformGestures { centroid, pan, zoom, _ ->
+                    val currentScale = zoomPercent / 100f
+                    val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                    val newPan = if (currentScale > 0.001f) {
+                        (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                    } else {
+                        panOffset + pan
+                    }
+                    onZoomPanChanged(newScale * 100f, newPan)
                 }
             }
             .layoutIdParent { width -> containerWidth = width },

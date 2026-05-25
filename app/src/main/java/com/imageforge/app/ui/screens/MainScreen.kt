@@ -206,11 +206,12 @@ fun TopAppBarSection(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // Left back button round glass target
+        val context = LocalContext.current
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .glass(cornerRadius = 22.dp, bgAlpha = 0.3f, borderAlpha = 0.5f)
-                .clickable { /* Handle back stack exit */ },
+                .clickable { (context as? android.app.Activity)?.finish() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
