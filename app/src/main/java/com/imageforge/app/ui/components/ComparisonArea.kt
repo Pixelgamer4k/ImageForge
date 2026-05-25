@@ -234,10 +234,11 @@ fun SideBySideView(
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         val currentScale = zoomPercent / 100f
                         val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                        val zoomAdjustedPan = pan / currentScale.coerceAtLeast(0.01f)
                         val newPan = if (currentScale > 0.001f) {
-                            (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                            (panOffset + centroid) * (newScale / currentScale) - centroid + zoomAdjustedPan
                         } else {
-                            panOffset + pan
+                            panOffset + zoomAdjustedPan
                         }
                         onZoomPanChanged(newScale * 100f, newPan)
                     }
@@ -286,10 +287,11 @@ fun SideBySideView(
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         val currentScale = zoomB / 100f
                         val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                        val zoomAdjustedPan = pan / currentScale.coerceAtLeast(0.01f)
                         val newPan = if (currentScale > 0.001f) {
-                            (panB + centroid) * (newScale / currentScale) - centroid + pan
+                            (panB + centroid) * (newScale / currentScale) - centroid + zoomAdjustedPan
                         } else {
-                            panB + pan
+                            panB + zoomAdjustedPan
                         }
                         if (isSynced) {
                             onZoomPanChanged(newScale * 100f, newPan)
@@ -348,10 +350,11 @@ fun OverlayView(
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     val currentScale = zoomPercent / 100f
                     val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                    val zoomAdjustedPan = pan / currentScale.coerceAtLeast(0.01f)
                     val newPan = if (currentScale > 0.001f) {
-                        (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                        (panOffset + centroid) * (newScale / currentScale) - centroid + zoomAdjustedPan
                     } else {
-                        panOffset + pan
+                        panOffset + zoomAdjustedPan
                     }
                     onZoomPanChanged(newScale * 100f, newPan)
                 }
@@ -457,10 +460,11 @@ fun SwipeView(
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     val currentScale = zoomPercent / 100f
                     val newScale = (currentScale * zoom).coerceIn(1f, 10f)
+                    val zoomAdjustedPan = pan / currentScale.coerceAtLeast(0.01f)
                     val newPan = if (currentScale > 0.001f) {
-                        (panOffset + centroid) * (newScale / currentScale) - centroid + pan
+                        (panOffset + centroid) * (newScale / currentScale) - centroid + zoomAdjustedPan
                     } else {
-                        panOffset + pan
+                        panOffset + zoomAdjustedPan
                     }
                     onZoomPanChanged(newScale * 100f, newPan)
                 }
